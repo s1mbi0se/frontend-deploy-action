@@ -1,0 +1,132 @@
+name: Deploy Fastcrud - DevTest
+
+on: workflow_call
+
+jobs:
+  prepare-server-configuration:
+    runs-on: self-hosted
+    timeout-minutes: 10
+    outputs:
+      deployment-matrix: ${{ steps.export-deployment-matrix.outputs.deployment-matrix }}
+    steps:
+      # Define permissions before builds. It is a workaround for a GitHub Actions known service bug
+      - name: Define permissions before builds and install libs
+        run: |
+          sudo chown -R $USER:$USER /home/simbiose/actions-runner/_work/fantasy-scripts
+      
+      - name: Checkout branch
+        uses: actions/checkout@v2
+
+      - name: Export deployment matrix
+        id: export-deployment-matrix
+        run: |
+          JSON="$(cat ./actions/deploy-devtest-config.json)"
+          JSON="${JSON//'%'/'%25'}"
+          JSON="${JSON//$'\n'/'%0A'}"
+          JSON="${JSON//$'\r'/'%0D'}"
+          echo "::set-output name=deployment-matrix::$JSON"
+
+  deployment:
+    runs-on: self-hosted
+    timeout-minutes: 40
+    strategy:
+      max-parallel: 1
+      matrix:
+        server: ${{ fromJson(needs.prepare-server-configuration.outputs.deployment-matrix) }}
+    env:
+      WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+      MESSAGE_DEPLOY_ERROR: ERROR - <@&744702699970232361> - The project ${{ github.event.repository.name }} WAS NOT DEPLOYED (${{ github.ref }}).
+      MESSAGE_DEPLOY_SUCCESS: SUCCESS - <@&744702699970232361> - The project ${{ github.event.repository.name }} WAS DEPLOYED (${{ github.ref }}).
+      VITE_PRIMARY_COLOR: blue
+      VITE_APP_DEFAULT_APP_NAME: Fantasy
+      VITE_API_HOST: https://apidjangoinfratest.simbioseventures.com
+      REPO_PROJECT: fantasy-scripts
+      CLIENT_NAME: fantasy
+      GIT_BRANCH: feature/new-action-deploy-frontend
+    needs: [prepare-server-configuration]
+    if: success()
+    steps:
+      - name: Run fastcrud deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ matrix.server.ip }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SIMBIOSE_SSH_KEY }}
+          port: ${{ secrets.PORT }}
+          script_stop: true
+          sync: true
+          script: |
+            echo "--------- FASTCRUD DEPLOY IS STARTING -----------"
+
+            cd /simbiose
+            echo "UPDATE FASTCRUD REPOSITORY"
+
+            export REPO_DIR=`mktemp -d`
+            echo "REPO_DIR=$REPO_DIR"
+
+            rm -rf $REPO_DIR
+
+            echo -e '\n\e[34;1mCloning FastCRUD branch '$GIT_BRANCH' on '$REPO_DIR'\e[0m'
+            git clone -b ${{ env.GIT_BRANCH }} https://${{ secrets.GIT_TOKEN }}@github.com/s1mbi0se/${{ env.REPO_PROJECT }}.git $REPO_DIR
+            pushd $REPO_DIR
+            
+            echo -e "\n*** Running yarn install into customer's repository *** \n"
+            yarn install --frozen-lockfile
+            
+            echo -e "\n*** Copying fast-crud's repository into customer's repository *** \n"
+            cd actions && ./scripts.sh ${{ secrets.GIT_TOKEN }}
+                        
+            echo -e "\n*** Running docker build *** \n"
+            cp Dockerfile ../fast-crud/Dockerfile
+            sudo docker build \
+                   --build-arg VITE_PRIMARY_COLOR="${{ env.VITE_PRIMARY_COLOR }}" \
+                   --build-arg VITE_APP_DEFAULT_APP_NAME="${{ env.VITE_APP_DEFAULT_APP_NAME }}" \
+                   --build-arg VITE_API_HOST="${{ env.VITE_API_HOST }}" \
+                    -t ${{ env.CLIENT_NAME }}_frontend ../fast-crud
+
+            echo -e "\n*** Killing current ${{ ENV.CLIENT_NAME }}_frontend container *** \n"
+            ./run_docker.sh ${{ ENV.CLIENT_NAME }}
+            
+            popd
+            rm -rf $REPO_DIR
+            sudo docker system prune -f
+
+            sleep 2
+            echo -e "\n*** List of docker containers running *** \n"
+            sudo docker ps
+
+            echo "DISCORD ALERT SUCCESS"
+            curl -d '{"content": "**${{ env.MESSAGE_DEPLOY_SUCCESS }} - Host: ${{ matrix.server.ip }}**"}' -H "Content-Type: application/json" "${{ env.WEBHOOK }}"
+            echo "--------- DEPLOY IS FINISHED WITH SUCCESS ---------"
+            echo "teste 1"
+
+      - name: Discord alert error
+        if: ${{ failure() }}
+        run: |
+          curl -d '{"content": "**${{ env.MESSAGE_DEPLOY_ERROR }} - Host: ${{ matrix.server.ip }}**"}' -H "Content-Type: application/json" "${{ env.WEBHOOK }}"
+
+  alert-error-result:
+    runs-on: self-hosted
+    timeout-minutes: 10
+    env:
+      WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+      MESSAGE_DEPLOY_ERROR: ERROR - <@&744702699970232361> - FINISHED FASTCRUD ON STAGE (${{ github.ref }}).
+    needs: [deployment]
+    if: failure()
+    steps:
+      - name: Discord alert error
+        run: |
+          curl -d '{"content": "**${{ env.MESSAGE_DEPLOY_ERROR }}**"}' -H "Content-Type: application/json" "${{ env.WEBHOOK }}"
+
+  alert-success-result:
+    runs-on: self-hosted
+    timeout-minutes: 10
+    env:
+      WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+      MESSAGE_DEPLOY_SUCCESS: SUCCESS - <@&744702699970232361> - FINISHED FASTCRUD ON STAGE (${{ github.ref }}).
+    needs: [deployment]
+    if: success()
+    steps:
+      - name: Discord alert success
+        run: |
+          curl -d '{"content": "**${{ env.MESSAGE_DEPLOY_SUCCESS }}**"}' -H "Content-Type: application/json" "${{ env.WEBHOOK }}"
