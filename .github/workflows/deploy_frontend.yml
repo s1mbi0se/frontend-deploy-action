@@ -26,13 +26,10 @@ on:
     secrets:
       port:
         required: true
-        type: string
       username:
         required: true
-        type: string
       simbiose_ssh_key:
         required: true
-        type: string
 
 # repo_project:
 #    description: 'Repository of Customer scripts'
