@@ -2,7 +2,7 @@ name: 'FastCRUD Frontend Deploy'
 author: 'FastCRUD Deployment Team'
 description: 'Build and deploy FastCRUD frontend application'
 inputs:
-  repo_projetc:
+  repo_project:
     description: 'Repository of Customer scripts'
     required: true
   client_name:
@@ -25,6 +25,7 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - run: echo Hello ${{ inputs.who-to-greet }}.
-      shell: bash
+    - run: ./.github/actions/deploy_frontend
+
+
 
