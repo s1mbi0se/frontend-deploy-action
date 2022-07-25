@@ -26,10 +26,13 @@ on:
     secrets:
       port:
         required: true
+        type: int
       username:
         required: true
+        type: string
       simbiose_ssh_key:
         required: true
+        type: string
 
 
 # repo_project:
