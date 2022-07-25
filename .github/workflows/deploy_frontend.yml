@@ -107,7 +107,7 @@ jobs:
             yarn install --frozen-lockfile
             
             echo -e "\n*** Running scripts.sh / Copying fast-crud's repository into customer's repository *** \n"
-            cd actions && ./scripts.sh ${{ secrets.git_token }} ${{ env.CLIENT_REPO_BRANCH }}
+            cd actions && ./scripts.sh ${{ secrets.git_token }} ${{ env.FASTCRUD_REPO_BRANCH }}
                         
             echo -e "\n*** Running docker build *** \n"
             cp Dockerfile ../fast-crud/Dockerfile
