@@ -23,6 +23,7 @@ on:
         required: false
         type: string
         default: 'blue'
+    secrets:
       port:
         required: true
         type: string
