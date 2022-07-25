@@ -97,10 +97,9 @@ jobs:
 
             export REPO_DIR=`mktemp -d`
             echo "REPO_DIR=$REPO_DIR"
-
             rm -rf $REPO_DIR
 
-            echo -e '\n\e[34;1mCloning Client's repository on branch '${{ env.CLIENT_REPO_BRANCH }}' on '$REPO_DIR'\e[0m'
+            echo -e '\n\e[34;1mCloning Client repository - branch '${{ env.CLIENT_REPO_BRANCH }}' on temporary directory '$REPO_DIR'\e[0m'
             git clone -b ${{ env.CLIENT_REPO_BRANCH }} https://${{ secrets.git_token }}@github.com/s1mbi0se/${{ env.REPO_PROJECT }}.git $REPO_DIR
             pushd $REPO_DIR
             
