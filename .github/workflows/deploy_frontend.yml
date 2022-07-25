@@ -28,7 +28,7 @@ on:
         type: string
         default: 'blue'
       frontend_client_tcp_port:
-        required: false
+        required: true
         type: string
 
     secrets:
@@ -81,6 +81,7 @@ jobs:
       CLIENT_NAME: ${{ inputs.client_name }}
       CLIENT_REPO_BRANCH: ${{ inputs.client_repo_branch }}
       FASTCRUD_REPO_BRANCH: ${{ inputs.fastcrud_repo_branch }}
+      FRONTEND_CLIENT_TCP_PORT: ${{ inputs.frontend_client_tcp_port }}
     needs: [prepare-server-configuration]
     if: success()
     steps:
@@ -122,7 +123,7 @@ jobs:
                     -t ${{ env.CLIENT_NAME }}_frontend ../fast-crud
 
             echo -e "\n*** Killing current ${{ ENV.CLIENT_NAME }}_frontend container *** \n"
-            ./run_docker.sh ${{ ENV.CLIENT_NAME }} ${{ inputs.frontend_client_tcp_port }}
+            ./run_docker.sh ${{ ENV.CLIENT_NAME }} ${{ ENV.FRONTEND_CLIENT_TCP_PORT }}
             
             popd
             rm -rf $REPO_DIR
