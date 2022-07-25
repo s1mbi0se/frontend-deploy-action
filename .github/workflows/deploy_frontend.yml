@@ -128,8 +128,6 @@ jobs:
             echo -e "\n*** List of docker containers running *** \n"
             sudo docker ps
 
-            echo "DISCORD ALERT SUCCESS"
-            curl -d '{"content": "**${{ env.MESSAGE_DEPLOY_SUCCESS }} - Host: ${{ matrix.server.ip }}**"}' -H "Content-Type: application/json" "${{ env.WEBHOOK }}"
             echo "--------- DEPLOY IS FINISHED WITH SUCCESS ---------"
 
 
