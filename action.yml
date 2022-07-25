@@ -25,7 +25,7 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - run: ./.github/actions/deploy_frontend
+    - run: ./.github/actions/deploy_frontend.yml
       shell: bash
 
 
