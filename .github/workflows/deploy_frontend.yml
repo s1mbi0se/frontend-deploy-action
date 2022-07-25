@@ -30,7 +30,7 @@ on:
         required: true
       simbiose_ssh_key:
         required: true
- 
+
 
 # repo_project:
 #    description: 'Repository of Customer scripts'
@@ -102,9 +102,9 @@ jobs:
         uses: appleboy/ssh-action@master
         with:
           host: ${{ matrix.server.ip }}
-          username: ${{ inputs.username }}
-          key: ${{ inputs.simbiose_ssh_key }}
-          port: ${{ inputs.port }}
+          username: ${{ secrets.username }}
+          key: ${{ secrets.simbiose_ssh_key }}
+          port: ${{ secrets.port }}
           script_stop: true
           sync: true
           script: |
