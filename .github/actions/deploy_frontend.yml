@@ -37,12 +37,12 @@ jobs:
       WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
       MESSAGE_DEPLOY_ERROR: ERROR - <@&744702699970232361> - The project ${{ github.event.repository.name }} WAS NOT DEPLOYED (${{ github.ref }}).
       MESSAGE_DEPLOY_SUCCESS: SUCCESS - <@&744702699970232361> - The project ${{ github.event.repository.name }} WAS DEPLOYED (${{ github.ref }}).
-      VITE_PRIMARY_COLOR: blue
-      VITE_APP_DEFAULT_APP_NAME: Fantasy
-      VITE_API_HOST: https://apidjangoinfratest.simbioseventures.com
-      REPO_PROJECT: fantasy-scripts
-      CLIENT_NAME: fantasy
-      GIT_BRANCH: feature/new-action-deploy-frontend
+      VITE_PRIMARY_COLOR: ${{ inputs.vite_primary_color}}
+      VITE_APP_DEFAULT_APP_NAME: ${{ inputs.vite_app_default_app_name }}
+      VITE_API_HOST: ${{ inputs.vite_api_host }}
+      REPO_PROJECT: ${{ inputs.repo_project }}
+      CLIENT_NAME: ${{ inputs.client_name }}
+      GIT_BRANCH: ${{ inputs.repo_branch }}
     needs: [prepare-server-configuration]
     if: success()
     steps:
