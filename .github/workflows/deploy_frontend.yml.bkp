@@ -1,42 +1,9 @@
 name: Deploy Fastcrud
 
 on:
-  workflow_call:
-    inputs:
-      repo_project:
-         required: true
-         type: string
-      client_name:
-        required: true
-        type: string
-      client_repo_branch:
-        required: false
-        type: string
-        default: 'master'
-      fastcrud_repo_branch:
-        required: false
-        type: string
-        default: 'master'
-      vite_app_default_app_name:
-        required: true
-        type: string
-      vite_api_host:
-        required: true
-        type: string
-      vite_primary_color:
-        required: false
-        type: string
-        default: 'blue'
-    secrets:
-      port:
-        required: true
-      username:
-        required: true
-      simbiose_ssh_key:
-        required: true
-      git_token:
-        required: true
-
+ push:
+   branches:
+     - feature/new-action-deploy-frontend
 
 jobs:
   prepare-server-configuration:
@@ -48,7 +15,7 @@ jobs:
       # Define permissions before builds. It is a workaround for a GitHub Actions known service bug
       - name: Define permissions before builds and install libs
         run: |
-          sudo chown -R $USER:$USER /home/simbiose/actions-runner/_work/${{ inputs.repo_project }}
+          sudo chown -R $USER:$USER /home/simbiose/actions-runner/_work/fantasy-scripts
       
       - name: Checkout branch
         uses: actions/checkout@v2
@@ -70,13 +37,15 @@ jobs:
       matrix:
         server: ${{ fromJson(needs.prepare-server-configuration.outputs.deployment-matrix) }}
     env:
-      VITE_PRIMARY_COLOR: ${{ inputs.vite_primary_color}}
-      VITE_APP_DEFAULT_APP_NAME: ${{ inputs.vite_app_default_app_name }}
-      VITE_API_HOST: ${{ inputs.vite_api_host }}
-      REPO_PROJECT: ${{ inputs.repo_project }}
-      CLIENT_NAME: ${{ inputs.client_name }}
-      CLIENT_REPO_BRANCH: ${{ inputs.client_repo_branch }}
-      FASTCRUD_REPO_BRANCH: ${{ inputs.fastcrud_repo_branch }}
+      WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+      MESSAGE_DEPLOY_ERROR: ERROR - <@&744702699970232361> - The project ${{ github.event.repository.name }} WAS NOT DEPLOYED (${{ github.ref }}).
+      MESSAGE_DEPLOY_SUCCESS: SUCCESS - <@&744702699970232361> - The project ${{ github.event.repository.name }} WAS DEPLOYED (${{ github.ref }}).
+      VITE_PRIMARY_COLOR: blue
+      VITE_APP_DEFAULT_APP_NAME: Fantasy
+      VITE_API_HOST: https://apidjangoinfratest.simbioseventures.com
+      REPO_PROJECT: fantasy-scripts
+      CLIENT_NAME: fantasy
+      GIT_BRANCH: feature/new-action-deploy-frontend
     needs: [prepare-server-configuration]
     if: success()
     steps:
@@ -84,9 +53,9 @@ jobs:
         uses: appleboy/ssh-action@master
         with:
           host: ${{ matrix.server.ip }}
-          username: ${{ secrets.username }}
-          key: ${{ secrets.simbiose_ssh_key }}
-          port: ${{ secrets.port }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SIMBIOSE_SSH_KEY }}
+          port: ${{ secrets.PORT }}
           script_stop: true
           sync: true
           script: |
@@ -100,15 +69,15 @@ jobs:
 
             rm -rf $REPO_DIR
 
-            echo -e '\n\e[34;1mCloning Client's repository on branch '${{ env.CLIENT_REPO_BRANCH }}' on '$REPO_DIR'\e[0m'
-            git clone -b ${{ env.CLIENT_REPO_BRANCH }} https://${{ secrets.git_token }}@github.com/s1mbi0se/${{ env.REPO_PROJECT }}.git $REPO_DIR
+            echo -e '\n\e[34;1mCloning client repository on branch '$GIT_BRANCH' on '$REPO_DIR'\e[0m'
+            git clone -b ${{ env.GIT_BRANCH }} https://${{ secrets.GIT_TOKEN }}@github.com/s1mbi0se/${{ env.REPO_PROJECT }}.git $REPO_DIR
             pushd $REPO_DIR
             
             echo -e "\n*** Running yarn install into customer's repository *** \n"
             yarn install --frozen-lockfile
             
-            echo -e "\n*** Running scripts.sh / Copying fast-crud's repository into customer's repository *** \n"
-            cd actions && ./scripts.sh ${{ secrets.git_token }} ${{ env.CLIENT_REPO_BRANCH }}
+            echo -e "\n*** Copying fast-crud's repository into customer's repository *** \n"
+            cd actions && ./scripts.sh ${{ secrets.GIT_TOKEN }}
                         
             echo -e "\n*** Running docker build *** \n"
             cp Dockerfile ../fast-crud/Dockerfile
@@ -132,6 +101,35 @@ jobs:
             echo "DISCORD ALERT SUCCESS"
             curl -d '{"content": "**${{ env.MESSAGE_DEPLOY_SUCCESS }} - Host: ${{ matrix.server.ip }}**"}' -H "Content-Type: application/json" "${{ env.WEBHOOK }}"
             echo "--------- DEPLOY IS FINISHED WITH SUCCESS ---------"
+            echo "teste 1"
 
+      - name: Discord alert error
+        if: ${{ failure() }}
+        run: |
+          curl -d '{"content": "**${{ env.MESSAGE_DEPLOY_ERROR }} - Host: ${{ matrix.server.ip }}**"}' -H "Content-Type: application/json" "${{ env.WEBHOOK }}"
 
+  alert-error-result:
+    runs-on: self-hosted
+    timeout-minutes: 10
+    env:
+      WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+      MESSAGE_DEPLOY_ERROR: ERROR - <@&744702699970232361> - FINISHED FASTCRUD ON STAGE (${{ github.ref }}).
+    needs: [deployment]
+    if: failure()
+    steps:
+      - name: Discord alert error
+        run: |
+          curl -d '{"content": "**${{ env.MESSAGE_DEPLOY_ERROR }}**"}' -H "Content-Type: application/json" "${{ env.WEBHOOK }}"
 
+  alert-success-result:
+    runs-on: self-hosted
+    timeout-minutes: 10
+    env:
+      WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+      MESSAGE_DEPLOY_SUCCESS: SUCCESS - <@&744702699970232361> - FINISHED FASTCRUD ON STAGE (${{ github.ref }}).
+    needs: [deployment]
+    if: success()
+    steps:
+      - name: Discord alert success
+        run: |
+          curl -d '{"content": "**${{ env.MESSAGE_DEPLOY_SUCCESS }}**"}' -H "Content-Type: application/json" "${{ env.WEBHOOK }}"
