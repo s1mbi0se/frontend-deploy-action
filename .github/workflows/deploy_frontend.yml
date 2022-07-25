@@ -30,6 +30,8 @@ on:
         required: true
       simbiose_ssh_key:
         required: true
+      git_token:
+        required: true
 
 
 # repo_project:
@@ -119,14 +121,14 @@ jobs:
             rm -rf $REPO_DIR
 
             echo -e '\n\e[34;1mCloning FastCRUD branch '$GIT_BRANCH' on '$REPO_DIR'\e[0m'
-            git clone -b ${{ env.GIT_BRANCH }} https://${{ secrets.GIT_TOKEN }}@github.com/s1mbi0se/${{ env.REPO_PROJECT }}.git $REPO_DIR
+            git clone -b ${{ env.GIT_BRANCH }} https://${{ secrets.git_token }}@github.com/s1mbi0se/${{ env.REPO_PROJECT }}.git $REPO_DIR
             pushd $REPO_DIR
             
             echo -e "\n*** Running yarn install into customer's repository *** \n"
             yarn install --frozen-lockfile
             
             echo -e "\n*** Copying fast-crud's repository into customer's repository *** \n"
-            cd actions && ./scripts.sh ${{ secrets.GIT_TOKEN }}
+            cd actions && ./scripts.sh ${{ secrets.git_token }}
                         
             echo -e "\n*** Running docker build *** \n"
             cp Dockerfile ../fast-crud/Dockerfile
