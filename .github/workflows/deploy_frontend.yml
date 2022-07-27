@@ -80,8 +80,10 @@ jobs:
       REPO_PROJECT: ${{ inputs.repo_project }}
       CLIENT_NAME: ${{ inputs.client_name }}
       CLIENT_REPO_BRANCH: ${{ inputs.client_repo_branch }}
+      FASTCRUD_REPO: fast-crud
       FASTCRUD_REPO_BRANCH: ${{ inputs.fastcrud_repo_branch }}
       FRONTEND_CLIENT_TCP_PORT: ${{ inputs.frontend_client_tcp_port }}
+      PROJECT_NAME: project_scripts
     needs: [prepare-server-configuration]
     if: success()
     steps:
@@ -110,12 +112,26 @@ jobs:
             
             echo -e "\n*** Running yarn install into customer's repository *** \n"
             yarn install --frozen-lockfile
-            
-            echo -e "\n*** Running scripts.sh / Copying fast-crud's repository into customer's repository *** \n"
-            cd actions && ./scripts.sh ${{ secrets.git_token }} ${{ env.FASTCRUD_REPO_BRANCH }}
-                        
-            echo -e "\n*** Running docker build *** \n"
-            cp Dockerfile ../fast-crud/Dockerfile
+
+
+
+            echo -e "\n*** Building custom scripts *** \n"
+            yarn webpack
+            echo -e "\n*** Cloning fast-crud's repository into customer's repository *** \n"
+            git clone -b ${{ env.FASTCRUD_REPO_BRANCH }} https://${{ secrets.git_token }}@github.com/s1mbi0se/${{ env.FASTCRUD_REPO }}.git
+
+            echo -e "\n*** Cloning fast-crud's repository into customer's repository *** \n"
+            mkdir ${{ env.PROJECT_NAME }}
+            cp -r "dist" ${{ env.PROJECT_NAME }}
+            cp -r "sql_migrations" ${{ env.PROJECT_NAME }}
+            cp -r "deploy_scripts" ${{ env.PROJECT_NAME }}
+            cp -r ${{ env.PROJECT_NAME }} ${{ env.FASTCRUD_REPO }}
+            rm -rf $PROJECT_NAME
+
+
+
+            echo -e "\n*** Running FastCRUD Frontend docker build *** \n"
+            cp ./actions/Dockerfile ./fast-crud/Dockerfile
             sudo docker build \
                    --build-arg VITE_PRIMARY_COLOR="${{ env.VITE_PRIMARY_COLOR }}" \
                    --build-arg VITE_APP_DEFAULT_APP_NAME="${{ env.VITE_APP_DEFAULT_APP_NAME }}" \
