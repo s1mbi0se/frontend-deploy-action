@@ -113,8 +113,6 @@ jobs:
             echo -e "\n*** Running yarn install into customer's repository *** \n"
             yarn install --frozen-lockfile
 
-
-
             echo -e "\n*** Building custom scripts *** \n"
             yarn webpack
             echo -e "\n*** Cloning fast-crud's repository into customer's repository *** \n"
@@ -127,8 +125,6 @@ jobs:
             cp -r "deploy_scripts" ${{ env.PROJECT_NAME }}
             cp -r ${{ env.PROJECT_NAME }} ${{ env.FASTCRUD_REPO }}
             rm -rf $PROJECT_NAME
-
-
 
             echo -e "\n*** Running FastCRUD Frontend docker build *** \n"
             cp ./actions/Dockerfile ./fast-crud/Dockerfile
