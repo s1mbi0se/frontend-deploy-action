@@ -120,7 +120,7 @@ jobs:
             echo -e "\n*** Cloning fast-crud's repository into customer's repository *** \n"
             git clone -b ${{ env.FASTCRUD_REPO_BRANCH }} https://${{ secrets.git_token }}@github.com/s1mbi0se/${{ env.FASTCRUD_REPO }}.git
 
-            echo -e "\n*** Cloning fast-crud's repository into customer's repository *** \n"
+            echo -e "\n*** Copying scripts into project folder *** \n"
             mkdir ${{ env.PROJECT_NAME }}
             cp -r "dist" ${{ env.PROJECT_NAME }}
             cp -r "sql_migrations" ${{ env.PROJECT_NAME }}
@@ -136,7 +136,7 @@ jobs:
                    --build-arg VITE_PRIMARY_COLOR="${{ env.VITE_PRIMARY_COLOR }}" \
                    --build-arg VITE_APP_DEFAULT_APP_NAME="${{ env.VITE_APP_DEFAULT_APP_NAME }}" \
                    --build-arg VITE_API_HOST="${{ env.VITE_API_HOST }}" \
-                    -t ${{ env.CLIENT_NAME }}_frontend ../fast-crud
+                    -t ${{ env.CLIENT_NAME }}_frontend ./fast-crud
 
             echo -e "\n*** Killing current ${{ ENV.CLIENT_NAME }}_frontend container *** \n"
             ./run_docker.sh ${{ ENV.CLIENT_NAME }} ${{ ENV.FRONTEND_CLIENT_TCP_PORT }}
