@@ -138,8 +138,8 @@ jobs:
                    --build-arg VITE_API_HOST="${{ env.VITE_API_HOST }}" \
                     -t ${{ env.CLIENT_NAME }}_frontend ./fast-crud
 
-            echo -e "\n*** Killing current ${{ ENV.CLIENT_NAME }}_frontend container *** \n"
-            ./run_docker.sh ${{ ENV.CLIENT_NAME }} ${{ ENV.FRONTEND_CLIENT_TCP_PORT }}
+            echo -e "\n*** Killing current ${{ ENV.CLIENT_NAME }}_frontend container and running new frontend container *** \n"
+            ./actions/run_docker.sh ${{ ENV.CLIENT_NAME }} ${{ ENV.FRONTEND_CLIENT_TCP_PORT }}
             
             popd
             rm -rf $REPO_DIR
