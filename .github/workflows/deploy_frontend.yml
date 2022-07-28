@@ -97,19 +97,19 @@ jobs:
           script_stop: true
           sync: true
           script: |
-            echo "--------- FASTCRUD DEPLOY IS STARTING -----------"
+           echo "--------- FASTCRUD DEPLOY IS STARTING -----------"
 
-            cd /simbiose
-            echo "UPDATE FASTCRUD REPOSITORY"
+           cd /simbiose
+           echo "UPDATE FASTCRUD REPOSITORY"
 
-            export REPO_DIR=`mktemp -d`
-            echo "REPO_DIR=$REPO_DIR"
-            rm -rf $REPO_DIR
+           export REPO_DIR=`mktemp -d`
+           echo "REPO_DIR=$REPO_DIR"
+           rm -rf $REPO_DIR
 
             echo -e '\n\e[34;1mCloning Client repository - branch '${{ env.CLIENT_REPO_BRANCH }}' on temporary directory '$REPO_DIR'\e[0m'
             git clone -b ${{ env.CLIENT_REPO_BRANCH }} https://${{ secrets.git_token }}@github.com/s1mbi0se/${{ env.REPO_PROJECT }}.git $REPO_DIR
             pushd $REPO_DIR
-            
+
             echo -e "\n*** Running yarn install into customer's repository *** \n"
             yarn install --frozen-lockfile
 
@@ -134,9 +134,18 @@ jobs:
                    --build-arg VITE_API_HOST="${{ env.VITE_API_HOST }}" \
                     -t ${{ env.CLIENT_NAME }}_frontend ./fast-crud
 
-            echo -e "\n*** Killing current ${{ ENV.CLIENT_NAME }}_frontend container and running new frontend container *** \n"
-            ./actions/run_docker.sh ${{ ENV.CLIENT_NAME }} ${{ ENV.FRONTEND_CLIENT_TCP_PORT }}
-            
+            NAME=$(sudo docker ps | grep -w ${{ env.CLIENT_NAME }}_frontend | awk '{print $11}')
+            printf "\n** Checking if a previous container is already running. Delete it if there is one.  Current container name is $NAME **\n"
+            if [ "$NAME" = "${{ env.CLIENT_NAME }}_frontend" ]; then
+              echo -e "\n*** Killing current ${{ env.CLIENT_NAME }}_frontend container *** \n";
+              sudo docker kill ${{ env.CLIENT_NAME }}_frontend;
+              sudo docker rm ${{ env.CLIENT_NAME }}_frontend;
+            else printf "\n*** No ${{ env.CLIENT_NAME }}_frontend container is currently running. *** \n";
+            fi
+
+            printf "\n*** Running new ${{ ENV.CLIENT_NAME }}_frontend container *** \n"
+            sudo docker run --restart unless-stopped --name ${{ env.CLIENT_NAME }}_frontend -d -p ${{ env.FRONTEND_CLIENT_TCP_PORT }}:80 ${{ ENV.CLIENT_NAME }}_frontend
+
             popd
             rm -rf $REPO_DIR
             sudo docker system prune -f
@@ -146,6 +155,3 @@ jobs:
             sudo docker ps
 
             echo "--------- DEPLOY IS FINISHED WITH SUCCESS ---------"
-
-
-
