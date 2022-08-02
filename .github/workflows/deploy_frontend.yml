@@ -30,6 +30,9 @@ on:
       frontend_client_tcp_port:
         required: true
         type: string
+      deploy_env_config_file:
+        required: true
+        type: string
 
     secrets:
       port:
@@ -60,7 +63,7 @@ jobs:
       - name: Export deployment matrix
         id: export-deployment-matrix
         run: |
-          JSON="$(cat ./actions/deploy-devtest-config.json)"
+          JSON="$(cat ./actions/${{ inputs.deploy_env_config_file }})"
           JSON="${JSON//'%'/'%25'}"
           JSON="${JSON//$'\n'/'%0A'}"
           JSON="${JSON//$'\r'/'%0D'}"
