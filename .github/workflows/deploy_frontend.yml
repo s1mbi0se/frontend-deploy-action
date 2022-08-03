@@ -116,9 +116,6 @@ jobs:
             echo -e "\n*** Running yarn install into customer's repository *** \n"
             yarn install --frozen-lockfile
             
-            echo -e "\n*** Running docker build *** \n"
-            cp Dockerfile ../fast-crud/Dockerfile
-
             echo -e "\n*** Building custom scripts *** \n"
             yarn webpack
             echo -e "\n*** Cloning fast-crud's repository into customer's repository *** \n"
