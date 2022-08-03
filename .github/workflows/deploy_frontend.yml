@@ -132,7 +132,7 @@ jobs:
             cp -r ${{ env.PROJECT_NAME }} ${{ env.FASTCRUD_REPO }}
             rm -rf $PROJECT_NAME
 
-            echo -e "\n*** Clean stopped dockers *** \n"            
+            echo -e "\n*** Clear images and dockers *** \n"            
             sudo docker system prune -f
 
             echo -e "\n*** Running FastCRUD Frontend docker build *** \n"
