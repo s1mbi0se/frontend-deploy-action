@@ -30,6 +30,9 @@ on:
       frontend_client_tcp_port:
         required: true
         type: string
+      deploy_env_config_file:
+        required: true
+        type: string
 
     secrets:
       port:
@@ -60,7 +63,7 @@ jobs:
       - name: Export deployment matrix
         id: export-deployment-matrix
         run: |
-          JSON="$(cat ./actions/deploy-devtest-config.json)"
+          JSON="$(cat ./actions/${{ inputs.deploy_env_config_file }})"
           JSON="${JSON//'%'/'%25'}"
           JSON="${JSON//$'\n'/'%0A'}"
           JSON="${JSON//$'\r'/'%0D'}"
@@ -80,8 +83,10 @@ jobs:
       REPO_PROJECT: ${{ inputs.repo_project }}
       CLIENT_NAME: ${{ inputs.client_name }}
       CLIENT_REPO_BRANCH: ${{ inputs.client_repo_branch }}
+      FASTCRUD_REPO: fast-crud
       FASTCRUD_REPO_BRANCH: ${{ inputs.fastcrud_repo_branch }}
       FRONTEND_CLIENT_TCP_PORT: ${{ inputs.frontend_client_tcp_port }}
+      PROJECT_NAME: project_scripts
     needs: [prepare-server-configuration]
     if: success()
     steps:
@@ -95,39 +100,64 @@ jobs:
           script_stop: true
           sync: true
           script: |
-            echo "--------- FASTCRUD DEPLOY IS STARTING -----------"
+           echo "--------- FASTCRUD DEPLOY IS STARTING -----------"
 
-            cd /simbiose
-            echo "UPDATE FASTCRUD REPOSITORY"
+           cd /simbiose
+           echo "UPDATE FASTCRUD REPOSITORY"
 
-            export REPO_DIR=`mktemp -d`
-            echo "REPO_DIR=$REPO_DIR"
-            rm -rf $REPO_DIR
+           export REPO_DIR=`mktemp -d`
+           echo "REPO_DIR=$REPO_DIR"
+           rm -rf $REPO_DIR
 
             echo -e '\n\e[34;1mCloning Client repository - branch '${{ env.CLIENT_REPO_BRANCH }}' on temporary directory '$REPO_DIR'\e[0m'
             git clone -b ${{ env.CLIENT_REPO_BRANCH }} https://${{ secrets.git_token }}@github.com/s1mbi0se/${{ env.REPO_PROJECT }}.git $REPO_DIR
             pushd $REPO_DIR
-            
+
             echo -e "\n*** Running yarn install into customer's repository *** \n"
             yarn install --frozen-lockfile
             
             echo -e "\n*** Running scripts.sh / Copying fast-crud's repository into customer's repository *** \n"
             cd actions && ./scripts.sh ${{ secrets.git_token }} ${{ env.FASTCRUD_REPO_BRANCH }}
 
+            echo -e "\n*** Running docker build *** \n"
+            cp Dockerfile ../fast-crud/Dockerfile
+
+            echo -e "\n*** Building custom scripts *** \n"
+            yarn webpack
+            echo -e "\n*** Cloning fast-crud's repository into customer's repository *** \n"
+            git clone -b ${{ env.FASTCRUD_REPO_BRANCH }} https://${{ secrets.git_token }}@github.com/s1mbi0se/${{ env.FASTCRUD_REPO }}.git
+
+            echo -e "\n*** Copying scripts into project folder *** \n"
+            mkdir ${{ env.PROJECT_NAME }}
+            cp -r "dist" ${{ env.PROJECT_NAME }}
+            cp -r "sql_migrations" ${{ env.PROJECT_NAME }}
+            cp -r "deploy_scripts" ${{ env.PROJECT_NAME }}
+            cp -r ${{ env.PROJECT_NAME }} ${{ env.FASTCRUD_REPO }}
+            rm -rf $PROJECT_NAME
+
             echo -e "\n*** Clean stopped dockers *** \n"            
             sudo docker system prune -f
 
-            echo -e "\n*** Running docker build *** \n"
-            cp Dockerfile ../fast-crud/Dockerfile
+            echo -e "\n*** Running FastCRUD Frontend docker build *** \n"
+            cp ./actions/Dockerfile ./fast-crud/Dockerfile
             sudo docker build \
                    --build-arg VITE_PRIMARY_COLOR="${{ env.VITE_PRIMARY_COLOR }}" \
                    --build-arg VITE_APP_DEFAULT_APP_NAME="${{ env.VITE_APP_DEFAULT_APP_NAME }}" \
                    --build-arg VITE_API_HOST="${{ env.VITE_API_HOST }}" \
-                    -t ${{ env.CLIENT_NAME }}_frontend ../fast-crud
+                    -t ${{ env.CLIENT_NAME }}_frontend ./fast-crud
 
-            echo -e "\n*** Killing current ${{ ENV.CLIENT_NAME }}_frontend container *** \n"
-            ./run_docker.sh ${{ ENV.CLIENT_NAME }} ${{ ENV.FRONTEND_CLIENT_TCP_PORT }}
-            
+            NAME=$(sudo docker ps | grep -w ${{ env.CLIENT_NAME }}_frontend | awk '{print $11}')
+            printf "\n** Checking if a previous container is already running. Delete it if there is one.  Current container name is $NAME **\n"
+            if [ "$NAME" = "${{ env.CLIENT_NAME }}_frontend" ]; then
+              echo -e "\n*** Killing current ${{ env.CLIENT_NAME }}_frontend container *** \n";
+              sudo docker kill ${{ env.CLIENT_NAME }}_frontend;
+              sudo docker rm ${{ env.CLIENT_NAME }}_frontend;
+            else printf "\n*** No ${{ env.CLIENT_NAME }}_frontend container is currently running. *** \n";
+            fi
+
+            printf "\n*** Running new ${{ ENV.CLIENT_NAME }}_frontend container *** \n"
+            sudo docker run --restart unless-stopped --name ${{ env.CLIENT_NAME }}_frontend -d -p ${{ env.FRONTEND_CLIENT_TCP_PORT }}:80 ${{ ENV.CLIENT_NAME }}_frontend
+
             popd
             rm -rf $REPO_DIR
             sudo docker system prune -f
@@ -137,6 +167,3 @@ jobs:
             sudo docker ps
 
             echo "--------- DEPLOY IS FINISHED WITH SUCCESS ---------"
-
-
-
