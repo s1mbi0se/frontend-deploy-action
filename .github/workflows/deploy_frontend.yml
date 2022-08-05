@@ -97,7 +97,7 @@ jobs:
           username: ${{ secrets.username }}
           key: ${{ secrets.simbiose_ssh_key }}
           port: ${{ secrets.port }}
-          command_timeout: 15m
+          command_timeout: 20m
           script_stop: true
           sync: true
           script: |
