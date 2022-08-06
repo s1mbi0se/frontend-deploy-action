@@ -115,7 +115,7 @@ jobs:
             pushd $REPO_DIR
 
             echo -e "\n*** Running yarn install into customer's repository *** \n"
-            yarn install --frozen-lockfile
+            yarn install 
             
             echo -e "\n*** Building custom scripts *** \n"
             yarn webpack
