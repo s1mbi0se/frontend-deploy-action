@@ -97,7 +97,7 @@ jobs:
           username: ${{ secrets.username }}
           key: ${{ secrets.simbiose_ssh_key }}
           port: ${{ secrets.port }}
-          command_timeout: 20m
+          command_timeout: 40m
           script_stop: true
           sync: true
           script: |
@@ -115,7 +115,7 @@ jobs:
             pushd $REPO_DIR
 
             echo -e "\n*** Running yarn install into customer's repository *** \n"
-            yarn install 
+            yarn install
             
             echo -e "\n*** Building custom scripts *** \n"
             yarn webpack
